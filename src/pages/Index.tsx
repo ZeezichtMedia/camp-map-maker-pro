@@ -1,15 +1,17 @@
-
 import React, { useState, useMemo } from 'react';
-import { Upload, MapPin, Settings, Eye, Edit3, Download, Share2 } from 'lucide-react';
+import { Upload, MapPin, Settings, Eye, Edit3, Download, Share2, LogOut } from 'lucide-react';
 import { MapEditor } from '../components/MapEditor';
 import { CategoryFilter } from '../components/CategoryFilter';
 import { HotspotsList } from '../components/HotspotsList';
 import { HotspotModal } from '../components/HotspotModal';
 import { AdminPanel } from '../components/AdminPanel';
+import { LoginForm } from '../components/LoginForm';
+import { useAuth } from '../contexts/AuthContext';
 import { Hotspot, MapData } from '../types';
 import { toast } from 'sonner';
 
 const Index = () => {
+  const { isAuthenticated, isLoading, logout } = useAuth();
   const [mapData, setMapData] = useState<MapData>({
     backgroundImage: '',
     hotspots: [],
@@ -19,6 +21,25 @@ const Index = () => {
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <MapPin className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-gray-600">Laden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
 
   // Get unique categories from hotspots
   const categories = useMemo(() => {
@@ -171,6 +192,14 @@ const Index = () => {
                     Bekijk Modus
                   </>
                 )}
+              </button>
+
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+                Uitloggen
               </button>
             </div>
           </div>
