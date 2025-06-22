@@ -103,7 +103,7 @@ export const MapEditor: React.FC<MapEditorProps> = ({
             onClick={(e) => handleHotspotClick(hotspot, e)}
           >
             <div className="relative group">
-              <div className="w-8 h-8 bg-green-500 border-4 border-white rounded-full shadow-lg hover:bg-green-600 transition-all duration-200 hover:scale-110 animate-pulse hover:animate-none">
+              <div className="w-8 h-8 bg-green-500 border-4 border-white rounded-full shadow-lg hover:bg-green-600 transition-all duration-200 hover:scale-110">
                 <MapPin className="w-4 h-4 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
               </div>
               

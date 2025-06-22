@@ -1,7 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Upload, MapPin, Settings, Eye, Edit3, Download, Share2 } from 'lucide-react';
 import { MapEditor } from '../components/MapEditor';
+import { CategoryFilter } from '../components/CategoryFilter';
+import { HotspotsList } from '../components/HotspotsList';
+import { HotspotModal } from '../components/HotspotModal';
+import { AdminPanel } from '../components/AdminPanel';
 import { Hotspot, MapData } from '../types';
 import { toast } from 'sonner';
 
@@ -11,6 +15,30 @@ const Index = () => {
     hotspots: [],
   });
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
+  const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  // Get unique categories from hotspots
+  const categories = useMemo(() => {
+    const categorySet = new Set(
+      mapData.hotspots
+        .map(h => h.category)
+        .filter(Boolean) as string[]
+    );
+    return Array.from(categorySet).sort();
+  }, [mapData.hotspots]);
+
+  // Filter hotspots based on selected categories
+  const filteredHotspots = useMemo(() => {
+    if (selectedCategories.length === 0) {
+      return mapData.hotspots;
+    }
+    return mapData.hotspots.filter(hotspot => 
+      hotspot.category && selectedCategories.includes(hotspot.category)
+    );
+  }, [mapData.hotspots, selectedCategories]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -32,6 +60,46 @@ const Index = () => {
       ...mapData,
       hotspots,
     });
+  };
+
+  const handleCategoryToggle = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleClearCategories = () => {
+    setSelectedCategories([]);
+  };
+
+  const handleHotspotClick = (hotspot: Hotspot) => {
+    setSelectedHotspot(hotspot);
+    setShowModal(true);
+  };
+
+  const handleEditHotspot = (hotspot: Hotspot) => {
+    setEditingHotspot(hotspot);
+  };
+
+  const handleSaveHotspot = (hotspot: Hotspot) => {
+    const existingIndex = mapData.hotspots.findIndex(h => h.id === hotspot.id);
+    if (existingIndex >= 0) {
+      const updatedHotspots = [...mapData.hotspots];
+      updatedHotspots[existingIndex] = hotspot;
+      handleHotspotsChange(updatedHotspots);
+    } else {
+      handleHotspotsChange([...mapData.hotspots, hotspot]);
+    }
+    setEditingHotspot(null);
+    toast.success('Hotspot opgeslagen!');
+  };
+
+  const handleDeleteHotspot = (id: string) => {
+    handleHotspotsChange(mapData.hotspots.filter(h => h.id !== id));
+    setEditingHotspot(null);
+    toast.success('Hotspot verwijderd!');
   };
 
   const handleExportData = () => {
@@ -143,60 +211,83 @@ const Index = () => {
 
         {/* Controls Bar */}
         {mapData.backgroundImage && (
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200">
-                    <Upload className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">Nieuwe Plattegrond</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
+          <>
+            <div className="mb-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200">
+                      <Upload className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Nieuwe Plattegrond</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
 
-                  <div className="text-sm text-gray-500">
-                    {mapData.hotspots.length} hotspot{mapData.hotspots.length !== 1 ? 's' : ''} geplaatst
+                    <div className="text-sm text-gray-500">
+                      {mapData.hotspots.length} hotspot{mapData.hotspots.length !== 1 ? 's' : ''} geplaatst
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleExportData}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-sm font-medium">Exporteren</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportData}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="text-sm font-medium">Exporteren</span>
+                    </button>
 
-                  <label className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg cursor-pointer transition-colors duration-200">
-                    <Share2 className="w-4 h-4" />
-                    <span className="text-sm font-medium">Importeren</span>
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleImportData}
-                      className="hidden"
-                    />
-                  </label>
+                    <label className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg cursor-pointer transition-colors duration-200">
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm font-medium">Importeren</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportData}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+
+            {/* Category Filter */}
+            {!isAdminMode && categories.length > 0 && (
+              <CategoryFilter
+                categories={categories}
+                selectedCategories={selectedCategories}
+                onCategoryToggle={handleCategoryToggle}
+                onClearAll={handleClearCategories}
+              />
+            )}
+          </>
         )}
 
         {/* Map Editor */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
           <MapEditor
             backgroundImage={mapData.backgroundImage}
-            hotspots={mapData.hotspots}
+            hotspots={filteredHotspots}
             isAdminMode={isAdminMode}
             onHotspotsChange={handleHotspotsChange}
           />
         </div>
+
+        {/* Hotspots List */}
+        {!isAdminMode && (
+          <HotspotsList
+            hotspots={mapData.hotspots}
+            filteredHotspots={filteredHotspots}
+            isAdminMode={isAdminMode}
+            onHotspotClick={handleHotspotClick}
+            onEditHotspot={handleEditHotspot}
+          />
+        )}
 
         {/* Instructions */}
         {mapData.backgroundImage && (
@@ -234,11 +325,23 @@ const Index = () => {
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-green-700">
+                <div className="text-sm text-green-700 space-y-3">
                   <div className="flex gap-3">
                     <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                     <div>
                       <strong>Interactieve hotspots:</strong> Klik op de groene markers om meer informatie te zien over verschillende locaties op de plattegrond.
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Filter op categorie:</strong> Gebruik de categoriefilters om alleen bepaalde typen locaties te tonen.
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div>
+                      <strong>Locaties overzicht:</strong> Bekijk alle locaties in een overzichtelijke lijst onder de plattegrond.
                     </div>
                   </div>
                 </div>
@@ -247,6 +350,26 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {showModal && selectedHotspot && (
+        <HotspotModal
+          hotspot={selectedHotspot}
+          onClose={() => {
+            setShowModal(false);
+            setSelectedHotspot(null);
+          }}
+        />
+      )}
+
+      {editingHotspot && (
+        <AdminPanel
+          hotspot={editingHotspot}
+          onSave={handleSaveHotspot}
+          onDelete={handleDeleteHotspot}
+          onCancel={() => setEditingHotspot(null)}
+        />
+      )}
     </div>
   );
 };
