@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Upload, MapPin, Settings, Eye, Edit3, Download, Share2, LogOut } from 'lucide-react';
 import { MapEditor } from '../components/MapEditor';
@@ -22,6 +23,26 @@ const Index = () => {
   const [editingHotspot, setEditingHotspot] = useState<Hotspot | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // Get unique categories from hotspots - MOVED BEFORE EARLY RETURNS
+  const categories = useMemo(() => {
+    const categorySet = new Set(
+      mapData.hotspots
+        .map(h => h.category)
+        .filter(Boolean) as string[]
+    );
+    return Array.from(categorySet).sort();
+  }, [mapData.hotspots]);
+
+  // Filter hotspots based on selected categories - MOVED BEFORE EARLY RETURNS
+  const filteredHotspots = useMemo(() => {
+    if (selectedCategories.length === 0) {
+      return mapData.hotspots;
+    }
+    return mapData.hotspots.filter(hotspot => 
+      hotspot.category && selectedCategories.includes(hotspot.category)
+    );
+  }, [mapData.hotspots, selectedCategories]);
+
   // Show loading screen while checking authentication
   if (isLoading) {
     return (
@@ -40,26 +61,6 @@ const Index = () => {
   if (!isAuthenticated) {
     return <LoginForm />;
   }
-
-  // Get unique categories from hotspots
-  const categories = useMemo(() => {
-    const categorySet = new Set(
-      mapData.hotspots
-        .map(h => h.category)
-        .filter(Boolean) as string[]
-    );
-    return Array.from(categorySet).sort();
-  }, [mapData.hotspots]);
-
-  // Filter hotspots based on selected categories
-  const filteredHotspots = useMemo(() => {
-    if (selectedCategories.length === 0) {
-      return mapData.hotspots;
-    }
-    return mapData.hotspots.filter(hotspot => 
-      hotspot.category && selectedCategories.includes(hotspot.category)
-    );
-  }, [mapData.hotspots, selectedCategories]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -23,7 +23,7 @@ export const PublicMapView: React.FC<PublicMapViewProps> = ({ mapData }) => {
         .filter(Boolean) as string[]
     );
     return Array.from(categorySet).sort();
-  }, [map Data.hotspots]);
+  }, [mapData.hotspots]);
 
   const filteredHotspots = useMemo(() => {
     if (selectedCategories.length === 0) {
