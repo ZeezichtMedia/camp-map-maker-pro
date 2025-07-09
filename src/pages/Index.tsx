@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { MapPin, Info, Settings, Eye } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { MapPin, Info, Settings, Eye, Upload, FileText } from 'lucide-react';
 import { PublicMapView } from '../components/PublicMapView';
 import { MapEditor } from '../components/MapEditor';
 import { campingMapData } from '../data/campingData';
@@ -8,6 +8,7 @@ import { campingMapData } from '../data/campingData';
 const Index = () => {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [mapData, setMapData] = useState(campingMapData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleHotspotsChange = (newHotspots: any[]) => {
     setMapData(prev => ({
@@ -29,6 +30,44 @@ const Index = () => {
     link.download = 'campingMapData.json';
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleImportJson = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/json') {
+      alert('Selecteer een geldig JSON bestand');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData = JSON.parse(e.target?.result as string);
+        
+        // Validate if it has the expected structure
+        if (jsonData.hotspots && Array.isArray(jsonData.hotspots)) {
+          setMapData(jsonData);
+          console.log('Map data imported successfully:', jsonData);
+        } else {
+          alert('Het JSON bestand heeft niet de juiste structuur. Het moet een "hotspots" array bevatten.');
+        }
+      } catch (error) {
+        console.error('Error parsing JSON:', error);
+        alert('Fout bij het lezen van het JSON bestand. Controleer of het geldig JSON is.');
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -66,12 +105,31 @@ const Index = () => {
               </button>
 
               {isAdminMode && (
-                <button
-                  onClick={exportMapData}
-                  className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
-                >
-                  Export Data
-                </button>
+                <>
+                  <button
+                    onClick={triggerFileInput}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import JSON
+                  </button>
+                  
+                  <button
+                    onClick={exportMapData}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Export Data
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleImportJson}
+                    className="hidden"
+                  />
+                </>
               )}
 
               {!isAdminMode && (
@@ -92,10 +150,20 @@ const Index = () => {
               <h3 className="text-lg font-semibold text-blue-800 mb-2">
                 Admin Modus - Hotspots Bewerken
               </h3>
-              <p className="text-sm text-blue-700">
-                Klik op de kaart om nieuwe hotspots toe te voegen. Klik op bestaande hotspots om ze te bewerken. 
-                Gebruik de "Export Data" knop om de bijgewerkte data te downloaden voor hardcoding.
-              </p>
+              <div className="text-sm text-blue-700 space-y-2">
+                <p>
+                  • Klik op de kaart om nieuwe hotspots toe te voegen
+                </p>
+                <p>
+                  • Klik op bestaande hotspots om ze te bewerken
+                </p>
+                <p>
+                  • Gebruik "Import JSON" om eerder geëxporteerde data te laden
+                </p>
+                <p>
+                  • Gebruik "Export Data" om de bijgewerkte data te downloaden voor hardcoding
+                </p>
+              </div>
             </div>
             
             <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
